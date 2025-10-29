@@ -17,12 +17,39 @@ def init(vals):
     fase = "buscar"
 
 def step():
-    # TODO:
-    # - Fase "buscar": comparar j con min_idx, actualizar min_idx, avanzar j.
-    #   Devolver {"a": min_idx, "b": j_actual, "swap": False, "done": False}.
-    #   Al terminar el barrido, pasar a fase "swap".
-    # - Fase "swap": si min_idx != i, hacer ese único swap y devolverlo.
-    #   Luego avanzar i, reiniciar j=i+1 y min_idx=i, volver a "buscar".
-    #
-    # Cuando i llegue al final, devolvé {"done": True}.
-    return {"done": True}
+    global i, j, min_idx, fase, items
+
+    # Si ya lo recorrio completa la parte no ordenada
+    if i >= n - 1:
+        return {"done": True}
+
+    # Buscar el mínimo en la parte no ordenada
+    if fase == "buscar":
+        # Comparar el actual con el mínimo
+        if j < n:
+            if items[j] < items[min_idx]:
+                min_idx = j
+            a, b = min_idx, j
+            j += 1
+            return {"a": a, "b": b, "swap": False, "done": False}
+        else:
+            # Terminamos de recorrer la parte no ordenada
+            fase = "swap"
+
+    # --- Fase 2: Hacer el swap del mínimo encontrado con la posición i ---
+    if fase == "swap":
+        if min_idx != i:
+            # Intercambio
+            items[i], items[min_idx] = items[min_idx], items[i]
+            res = {"a": i, "b": min_idx, "swap": True, "done": False}
+        else:
+            # Si ya estaba en su lugar, no hay swap
+            res = {"a": i, "b": min_idx, "swap": False, "done": False}
+
+        # Avanzamos a la siguiente posición y reiniciamos el estado
+        i += 1
+        j = i + 1
+        min_idx = i
+        fase = "buscar"
+        ##return {"done": True}
+        return res
