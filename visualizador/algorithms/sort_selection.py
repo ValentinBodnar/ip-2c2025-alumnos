@@ -20,7 +20,9 @@ def step():
     if i >= n - 1:
         return {"done": True}
 
-    a, b, swap = min_idx, j, False
+    a = min_idx
+    b = j
+    swap = False
 
     if j < n:
         if items[j] < items[min_idx]:
@@ -32,7 +34,8 @@ def step():
             items[i], items[min_idx] = items[min_idx], items[i]
             swap = True
         # Pasada completa: avanzamos al inicio de la parte no ordenada
+        a, b = i, min_idx
         i += 1
         j = i + 1
         min_idx = i
-        return {"a": i-1, "b": min_idx, "swap": swap, "done": False}
+        return {"a": a, "b": b, "swap": swap, "done": False}
