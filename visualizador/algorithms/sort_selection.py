@@ -1,5 +1,3 @@
-# Contrato: init(vals), step() -> {"a": int, "b": int, "swap": bool, "done": bool}
-
 items = []
 n = 0
 i = 0          # inicio de la parte no ordenada
@@ -24,13 +22,13 @@ def step():
     b = j
     swap = False
 
-    if j < n:
+    if j < n: # Repite hasta hallar el mínimo dentro del mismo ciclo
         if items[j] < items[min_idx]:
             min_idx = j
         j += 1
         return {"a": a, "b": b, "swap": swap, "done": False}
     else:
-        if min_idx != i:
+        if min_idx != i: # Si el mínimo hallado no esta en su posición lo reemplazo
             items[i], items[min_idx] = items[min_idx], items[i]
             swap = True
         # Pasada completa: avanzamos al inicio de la parte no ordenada
