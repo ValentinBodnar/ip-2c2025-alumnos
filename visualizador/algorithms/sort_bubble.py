@@ -16,19 +16,19 @@ def step():
     if i >= n - 1:
         return {"done": True}
 
-    # Defino el par a comparar:
+    # Defino el par a comparar
     a = j
     b = j + 1
     swap = False
 
-    # Si están en el orden incorrecto, intercambiamos:
+    # Si están en el orden incorrecto, intercambiamos
     if items[a] > items[b]:
         items[a], items[b] = items[b], items[a]
         swap = True
 
-    # Avanzamos al siguiente par:
+    # Avanzamos al siguiente par
     j += 1
-    # Completa un ciclo:
+    # Completa un ciclo y resta i para no evaluar mas los de la derecha
     if j >= n - i - 1:
         j = 0
         i += 1

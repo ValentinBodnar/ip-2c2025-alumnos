@@ -22,7 +22,7 @@ def step():
         j = i
         return {"a": j-1, "b": j, "swap": False, "done": False}
 
-    if j > 0 and items[j-1] > items[j]:
+    if j > 0 and items[j-1] > items[j]: # se repite hasta que quede ordenado el actual en la parte izquierda
         items[j-1], items[j] = items[j], items[j-1]
         j -= 1
         return {"a": j, "b": j+1, "swap": True, "done": False}
