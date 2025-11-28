@@ -1,119 +1,116 @@
-# Merge Sort (iterativo por tamaños de bloque)
-# Implementación por micro-pasos compatible con la UI.
-# Durante el merge se usan swaps adyacentes para mover el elemento del bloque derecho
-# hacia la posición correcta en el bloque izquierdo; de ese modo cada llamada a step
-# puede devolver swap=True cuando realiza un intercambio físico en 'items'.
+# Contrato: init(vals), step() -> {"a": int, "b": int, "swap": bool, "done": bool}
+
+# Merge Sort - version iterativa (bottom-up)
+# En lugar de dividir recursivamente, arranco con bloques chicos (tamaño 1)
+# y los voy mezclando de a pares. Despues duplico el tamaño y repito.
+# Asi voy: 1 -> 2 -> 4 -> 8 -> ... hasta que el bloque sea todo el array.
 
 items = []
 n = 0
-# Estado para merge sort iterativo usando objetivo temporal por segmento
-width = 0
-left = 0
-mid = 0
-right = 0
-phase = 0  # 0: iniciar/ajustar width, 1: preparar merge (compute target), 2: aplicar swaps para alcanzar target, 3: avanzar
-# dentro del segmento
-p = 0       # posición actual en el segmento que queremos fijar
-q = None    # índice en uso para desplazamiento durante shifting
-target = None  # lista objetivo para el segmento [left:right)
+
+# variables para controlar que bloques estoy procesando
+tam_bloque = 1    # tamaño actual de los bloques que estoy mezclando
+izq = 0           # inicio del primer bloque
+med = 0           # fin del primer bloque (y comienzo del segundo)
+der = 0           # fin del segundo bloque
+
+# para mezclar uso una estrategia simple:
+# calculo como deberia quedar el segmento ordenado (lo guardo en "objetivo")
+# y voy haciendo swaps de a uno para alcanzar ese estado
+fase = 0          # me dice en que etapa estoy: 0=preparar, 1=calcular, 2=mezclar
+pos = 0           # posicion actual dentro del segmento que estoy ordenando
+objetivo = []     # aca guardo como tiene que quedar el segmento
+
 
 def init(vals):
-    global items, n, width, left, mid, right, phase, p, q, target
+    global items, n, tam_bloque, izq, med, der, fase, pos, objetivo
+
     items = list(vals)
     n = len(items)
-    width = 1
-    left = 0
-    mid = 0
-    right = 0
-    phase = 0
-    p = 0
-    q = None
-    target = None
+
+    # si tiene 0 o 1 elemento, ya esta ordenado
+    if n <= 1:
+        return
+
+    # empiezo con bloques de tamaño 1
+    tam_bloque = 1
+    izq = 0
+    med = 0
+    der = 0
+    fase = 0
+    pos = 0
+    objetivo = []
+
 
 def step():
-    """Un micro-paso que realiza un único swap adyacente o una comparación informativa.
+    global items, n, tam_bloque, izq, med, der, fase, pos, objetivo
 
-    Implementación:
-    - Para cada width se procesan segmentos [left:left+width) y [left+width:left+2*width)
-    - Para el merge se calcula el `target` = sorted(items[left:right]) y luego se aplica la transformación
-      hacia `target` usando swaps adyacentes; cada swap es un micro-paso con swap=True.
-    - Esto garantiza que no hay índices fuera de rango y que el merge produce el resultado correcto.
-    """
-    global width, left, mid, right, phase, p, q, target
-
+    # array vacio o de 1 elemento ya esta listo
     if n <= 1:
         return {"done": True}
 
-    # iniciar/ajustar width
-    if phase == 0:
-        if width >= n:
+    # FASE 0: preparar el siguiente par de bloques para mezclar
+    if fase == 0:
+        # si el tamaño de bloque llego al tamaño del array, termine
+        if tam_bloque >= n:
             return {"done": True}
-        left = 0
-        mid = min(left + width, n)
-        right = min(left + 2 * width, n)
-        target = None
-        p = left
-        q = None
-        phase = 1
-        return {"a": left, "b": mid if mid < n else n-1, "swap": False, "done": False}
 
-    # preparar merge: computar target para el segmento actual
-    if phase == 1:
-        # si no hay segmento derecho, saltar
-        if left >= n or mid >= n or left >= right:
-            phase = 3
-            return {"a": left, "b": left, "swap": False, "done": False}
-        target = list(sorted(items[left:right]))
-        p = left
-        q = None
-        phase = 2
-        return {"a": p, "b": right - 1, "swap": False, "done": False}
+        # si procese todos los bloques de este nivel, paso al siguiente
+        if izq >= n:
+            tam_bloque *= 2  # duplico el tamaño de bloque
+            izq = 0          # arranco de nuevo desde el principio
+            return step()    # llamo de vuelta para seguir
 
-    # aplicar swaps para alcanzar target
-    if phase == 2:
-        if p >= right:
-            # terminado este segmento
-            phase = 3
-            return {"a": left, "b": right - 1 if right - 1 >= 0 else 0, "swap": False, "done": False}
+        # configuro los limites de los bloques a mezclar
+        med = min(izq + tam_bloque, n)      # hasta donde llega el bloque izq
+        der = min(izq + tam_bloque * 2, n)  # hasta donde llega el bloque der
 
-        # si ya coincide en la posición p, avanzamos
-        if items[p] == target[p - left]:
-            prev = p
-            p += 1
-            return {"a": prev, "b": prev, "swap": False, "done": False}
+        # si no hay bloque derecho, paso al siguiente par
+        if med >= n or izq >= der:
+            izq += tam_bloque * 2  # salto al siguiente par de bloques
+            return step()
 
-        # buscar el elemento objetivo en la porción actual
-        # (debe existir)
-        found = None
-        for idx in range(p + 1, right):
-            if items[idx] == target[p - left]:
-                found = idx
+        # listo para calcular el objetivo
+        fase = 1
+        return {"a": izq, "b": med if med < n else n - 1, "swap": False, "done": False}
+
+    # FASE 1: calcular como deberia quedar el segmento ordenado
+    if fase == 1:
+        # simplemente ordeno el segmento completo y lo guardo
+        objetivo = sorted(items[izq:der])
+        pos = izq  # empiezo desde el inicio del segmento
+        fase = 2   # paso a la fase de mezclar
+        return {"a": pos, "b": der - 1, "swap": False, "done": False}
+
+    # FASE 2: ir haciendo swaps hasta alcanzar el objetivo
+    if fase == 2:
+        # si llegue al final del segmento, paso al siguiente par de bloques
+        if pos >= der:
+            izq += tam_bloque * 2
+            fase = 0
+            return step()
+
+        # si el elemento ya esta donde tiene que estar, avanzo
+        if items[pos] == objetivo[pos - izq]:
+            pos += 1
+            return {"a": pos - 1, "b": pos - 1, "swap": False, "done": False}
+
+        # busco donde esta el elemento que deberia ir en esta posicion
+        idx_correcto = None
+        for k in range(pos + 1, der):
+            if items[k] == objetivo[pos - izq]:
+                idx_correcto = k
                 break
-        if found is None:
-            # Esto no debería ocurrir, pero para seguridad avanzamos p
-            p += 1
-            return {"a": p - 1, "b": p - 1, "swap": False, "done": False}
 
-        # realizar un único swap adyacente para acercar found hacia p
-        a = found - 1
-        b = found
-        items[a], items[b] = items[b], items[a]
-        # si after swap the element moved into position p, we'll increment p next steps
-        return {"a": a, "b": b, "swap": True, "done": False}
+        # si no lo encuentro (raro, pero por las dudas), avanzo
+        if idx_correcto is None:
+            pos += 1
+            return {"a": pos - 1, "b": pos - 1, "swap": False, "done": False}
 
-    # avanzar al siguiente merge o aumentar width
-    if phase == 3:
-        left += 2 * width
-        if left >= n:
-            width *= 2
-            phase = 0
-            return {"a": 0, "b": 0, "swap": False, "done": False}
-        else:
-            mid = min(left + width, n)
-            right = min(left + 2 * width, n)
-            p = left
-            target = None
-            phase = 1
-            return {"a": left, "b": mid if mid < n else n-1, "swap": False, "done": False}
+        # hago un swap adyacente para acercar el elemento a su lugar
+        # esto es como ir "burbujeando" el elemento hacia donde tiene que ir
+        items[idx_correcto - 1], items[idx_correcto] = items[idx_correcto], items[idx_correcto - 1]
+
+        return {"a": idx_correcto - 1, "b": idx_correcto, "swap": True, "done": False}
 
     return {"done": True}

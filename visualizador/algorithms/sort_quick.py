@@ -1,90 +1,105 @@
-# Quick Sort (Lomuto partition) — implementación por micro-pasos
 # Contrato: init(vals), step() -> {"a": int, "b": int, "swap": bool, "done": bool}
+
+# Quick Sort - version iterativa con pila
+# La idea es elegir un pivot (el ultimo elemento) y poner todos los menores
+# a la izquierda y los mayores a la derecha. Despues repetir con cada mitad.
 
 items = []
 n = 0
-# Estado para Quick Sort
-stack = []     # pila de segmentos (lo, hi) pendientes, hi es índice inclusivo
-lo = 0
-hi = 0
-pivot = None
-i = 0         # índice i de la partición (posición donde irá el siguiente menor)
-j = 0         # índice j que recorre
-phase = 0     # 0: obtener segmento, 1: particionar (iterando j), 2: swap pivot y push subsegmentos
+
+stack = []       # aca guardo los rangos que me falta ordenar
+
+# estas variables las uso mientras particiono
+inicio = 0       # desde donde arranca el rango que estoy ordenando
+fin = 0          # hasta donde llega el rango
+pivot_val = 0    # el valor del pivot (guardo el valor, no la posicion)
+i = 0            # marca hasta donde llegaron los elementos menores que el pivot
+j = 0            # voy recorriendo el rango con j
+
+fase = 0         # controla en que parte del proceso estoy
+
 
 def init(vals):
-    global items, n, stack, lo, hi, pivot, i, j, phase
+    global items, n, stack, inicio, fin, pivot_val, i, j, fase
+
     items = list(vals)
     n = len(items)
     stack = []
+
+    # si hay mas de 1 elemento, meto todo en la pila para empezar
     if n > 1:
-        stack.append((0, n-1))
-    lo = 0
-    hi = 0
-    pivot = None
+        stack.append((0, n - 1))
+
+    # reseteo todo
+    inicio = 0
+    fin = 0
+    pivot_val = 0
     i = 0
     j = 0
-    phase = 0
+    fase = 0
+
 
 def step():
-    """Un micro-paso de Quick Sort usando Lomuto partition.
+    global items, n, stack, inicio, fin, pivot_val, i, j, fase
 
-    - Cada comparación entre items[j] y pivot devuelve swap=False
-    - Cada intercambio real (items[i] <-> items[j] o swap final con pivot) devuelve swap=True
-    - Cuando no hay más segmentos, devuelve {"done": True}
-    """
-    global items, n, stack, lo, hi, pivot, i, j, phase
-
+    # si el array tiene 0 o 1 elemento, ya esta ordenado
     if n <= 1:
         return {"done": True}
 
-    # Obtener siguiente segmento a procesar
-    if phase == 0:
+    # FASE 0: sacar un rango nuevo de la pila para procesar
+    if fase == 0:
+        # si no quedan rangos, termine
         if not stack:
             return {"done": True}
-        lo, hi = stack.pop()
-        if lo >= hi:
-            # segmento trivial: nada que hacer
-            return {"a": lo, "b": hi, "swap": False, "done": False}
-        # inicializar partición Lomuto
-        pivot = items[hi]
-        i = lo
-        j = lo
-        phase = 1
-        return {"a": j, "b": hi, "swap": False, "done": False}
 
-    # Fase de partición: recorrer j desde lo..hi-1
-    if phase == 1:
-        if j <= hi - 1:
-            # comparar items[j] con pivot
-            if items[j] < pivot:
-                # swap items[i] <-> items[j]
+        inicio, fin = stack.pop()
+
+        # si el rango tiene 1 solo elemento, ya esta ordenado
+        if inicio >= fin:
+            return {"a": inicio, "b": fin, "swap": False, "done": False}
+
+        # guardo el valor del pivot (es el ultimo del rango)
+        pivot_val = items[fin]
+        i = inicio  # aca va a empezar la frontera de elementos menores
+        j = inicio  # arranco a recorrer desde el inicio
+
+        fase = 1
+        # muestro cual es el pivot
+        return {"a": j, "b": fin, "swap": False, "done": False}
+
+    # FASE 1: voy recorriendo y moviendo los menores a la izquierda
+    if fase == 1:
+        # mientras no llegue al pivot, sigo comparando
+        if j <= fin - 1:
+            # si el elemento actual es menor que el pivot
+            if items[j] < pivot_val:
+                # lo muevo a la zona de menores (intercambio con i)
+                items[i], items[j] = items[j], items[i]
                 a = i
                 b = j
-                items[a], items[b] = items[b], items[a]
-                i += 1
-                j += 1
+                i += 1  # avanzo la frontera de menores
+                j += 1  # avanzo el cursor
                 return {"a": a, "b": b, "swap": True, "done": False}
             else:
-                # no swap, solo avanzamos j
+                # es mayor o igual, lo dejo donde esta
                 a = j
-                b = hi
-                j += 1
+                b = fin  # muestro que lo estoy comparando con el pivot
+                j += 1   # solo avanzo el cursor
                 return {"a": a, "b": b, "swap": False, "done": False}
         else:
-            # terminar partición: swap items[i] con pivot(items[hi])
-            a = i
-            b = hi
-            items[a], items[b] = items[b], items[a]
-            # pivot en su posición final: i
-            pivot_index = i
-            # agregar subsegmentos pendientes (izquierda y derecha)
-            # izquierda: lo..pivot_index-1, derecha: pivot_index+1..hi
-            if lo < pivot_index - 1:
-                stack.append((lo, pivot_index - 1))
-            if pivot_index + 1 < hi:
-                stack.append((pivot_index + 1, hi))
-            phase = 0
-            return {"a": a, "b": b, "swap": True, "done": False}
+            # llegue al final, ahora pongo el pivot en su lugar definitivo
+            items[i], items[fin] = items[fin], items[i]
+            pivot_pos = i
+
+            # ahora apilo las dos mitades para ordenarlas despues
+            # primero la mitad izquierda (menores que el pivot)
+            if inicio < pivot_pos - 1:
+                stack.append((inicio, pivot_pos - 1))
+            # despues la mitad derecha (mayores que el pivot)
+            if pivot_pos + 1 < fin:
+                stack.append((pivot_pos + 1, fin))
+
+            fase = 0  # vuelvo a la fase 0 para sacar otro rango
+            return {"a": i, "b": fin, "swap": True, "done": False}
 
     return {"done": True}
